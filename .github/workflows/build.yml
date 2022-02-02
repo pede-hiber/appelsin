@@ -1,0 +1,59 @@
+name: "CI"
+on:
+  push:
+    branches:
+      - master
+    tags:
+      - 'v*'
+    paths:
+      - 'package.json'
+      - 'externals/**'
+      - 'src/**'
+      - 'tests/**'
+      - 'html/**'
+      - '.github/workflows/build.yml'
+      - 'CMakeLists.txt'
+      - 'test_scripts/testwasm.js'
+  pull_request:
+    branches:
+      - '*'
+
+env:
+  ACTIONS_ALLOW_UNSECURE_COMMANDS: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: echo something
+        id: echoid
+        run: echo "hepp"
+      - name: echo2
+        run: echo "again"
+      - name: run root
+        run: |
+          echo "next ${{ github.workspace }} " 
+          node demo.js
+      - name: run actions
+        run: |
+          echo "next ${{ github.workspace }} " 
+          node actions/hello.js
+      - name: run js
+        run: |
+          cd ${{ github.workspace }}
+          echo "next ${{ github.workspace }} " 
+          node test_scripts/hello.js
+
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add comment
+        uses: actions/github-script@v5
+        with:
+          script: |
+            github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: 'A comment'
+            })
