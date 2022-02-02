@@ -25,35 +25,44 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      - name: checkout source
+        uses: actions/checkout@v2
       - name: echo something
         id: echoid
-        run: echo "hepp"
+        run: echo "hepp too"
       - name: echo2
-        run: echo "again"
+        id: echo2        
+        run: | 
+          echo "again"
+          echo '::set-output name=result::green'
+  
       - name: run root
         run: |
           echo "next ${{ github.workspace }} " 
           node demo.js
-      - name: run actions
-        run: |
-          echo "next ${{ github.workspace }} " 
-          node actions/hello.js
-      - name: run js
-        run: |
-          cd ${{ github.workspace }}
-          echo "next ${{ github.workspace }} " 
-          node test_scripts/hello.js
-
-  report:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Add comment
-        uses: actions/github-script@v5
+          
+      - name: runtest
+        id: runtest
+        uses: pede-hiber/app-action@test
         with:
-          script: |
-            github.rest.issues.createComment({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: 'A comment'
-            })
+          file: '${{ github.workspace }}/demo.js'
+          tag: ${{ github.ref_name }}
+      - name: report result
+        run: | 
+          echo "echo2.result=${{ steps.echo2.outputs.result }}"
+          echo "runtest.result=${{ steps.runtest.outputs.result }}"
+          file ./testresult.txt
+        
+  # report:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Add comment
+  #       uses: actions/github-script@v5
+  #       with:
+  #         script: |
+  #           github.rest.issues.createComment({
+  #           issue_number: context.issue.number,
+  #           owner: context.repo.owner,
+  #           repo: context.repo.repo,
+  #           body: 'A comment'
+  #           })
