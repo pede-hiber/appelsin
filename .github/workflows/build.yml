@@ -20,6 +20,7 @@ on:
 
 env:
   ACTIONS_ALLOW_UNSECURE_COMMANDS: true
+  MSG: ""
 
 jobs:
   build:
@@ -51,8 +52,36 @@ jobs:
         run: | 
           echo "echo2.result=${{ steps.echo2.outputs.result }}"
           echo "runtest.result=${{ steps.runtest.outputs.result }}"
-          file ./testresult.txt
-        
+          echo "test result" > ./result.txt
+          echo "line 2" >> ./result.txt
+
+      - name: Check file existence
+        id: check_files
+        uses: andstor/file-existence-action@v1
+        with:
+          files: "./result.txt"
+
+      - name: File exists
+        if: steps.check_files.outputs.files_exists == 'true'
+        # Only runs if all of the files exists
+        run: |
+          echo 'MSG<<EOF' >> $GITHUB_ENV
+          cat ./result.txt >> $GITHUB_ENV
+          echo 'EOF' >> $GITHUB_ENV
+          echo "::set-output name=message:: ${{ env.MSG }}"
+
+      - name: Add comment
+        uses: actions/github-script@v5
+        if: steps.check_files.outputs.files_exists == 'true'
+        with:
+          script: |
+            github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: `${{ env.MSG }}`
+            })
+
   # report:
   #   runs-on: ubuntu-latest
   #   steps:
