@@ -20,40 +20,78 @@ on:
 
 env:
   ACTIONS_ALLOW_UNSECURE_COMMANDS: true
+  MSG: ""
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      - name: checkout source
+        uses: actions/checkout@v2
       - name: echo something
         id: echoid
-        run: echo "hepp"
+        run: echo "hepp too"
       - name: echo2
-        run: echo "again"
+        id: echo2        
+        run: | 
+          echo "again"
+          echo '::set-output name=result::green'
+  
       - name: run root
         run: |
           echo "next ${{ github.workspace }} " 
           node demo.js
-      - name: run actions
-        run: |
-          echo "next ${{ github.workspace }} " 
-          node actions/hello.js
-      - name: run js
-        run: |
-          cd ${{ github.workspace }}
-          echo "next ${{ github.workspace }} " 
-          node test_scripts/hello.js
+          
+      - name: runtest
+        id: runtest
+        uses: pede-hiber/app-action@test
+        with:
+          file: '${{ github.workspace }}/demo.js'
+          tag: ${{ github.ref_name }}
+      - name: report result
+        run: | 
+          echo "echo2.result=${{ steps.echo2.outputs.result }}"
+          echo "runtest.result=${{ steps.runtest.outputs.result }}"
+          echo "test result" > ./result.txt
+          echo "line 2" >> ./result.txt
 
-  report:
-    runs-on: ubuntu-latest
-    steps:
+      - name: Check file existence
+        id: check_files
+        uses: andstor/file-existence-action@v1
+        with:
+          files: "./result.txt"
+
+      - name: File exists
+        if: steps.check_files.outputs.files_exists == 'true'
+        # Only runs if all of the files exists
+        run: |
+          echo 'MSG<<EOF' >> $GITHUB_ENV
+          cat ./result.txt >> $GITHUB_ENV
+          echo 'EOF' >> $GITHUB_ENV
+          echo "::set-output name=message:: ${{ env.MSG }}"
+
       - name: Add comment
         uses: actions/github-script@v5
+        if: steps.check_files.outputs.files_exists == 'true'
         with:
           script: |
             github.rest.issues.createComment({
             issue_number: context.issue.number,
             owner: context.repo.owner,
             repo: context.repo.repo,
-            body: 'A comment'
+            body: `${{ env.MSG }}`
             })
+
+  # report:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Add comment
+  #       uses: actions/github-script@v5
+  #       with:
+  #         script: |
+  #           github.rest.issues.createComment({
+  #           issue_number: context.issue.number,
+  #           owner: context.repo.owner,
+  #           repo: context.repo.repo,
+  #           body: 'A comment'
+  #           })
